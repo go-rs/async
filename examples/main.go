@@ -22,10 +22,9 @@ func main() {
 		},
 	}
 
-	for _, a := range promise.All(tasks) {
-		// switch statement for results
-		fmt.Println(<-a)
-	}
+	result := promise.All(tasks)
+
+	fmt.Println("Result: ", result)
 
 	fmt.Println("exit")
 }

@@ -13,16 +13,22 @@ func main() {
 
 	tasks := []async.Task{
 		func() interface{} {
-			time.Sleep(1000 * time.Microsecond)
+			fmt.Println("Running Hello..........")
+			time.Sleep(4 * time.Second)
+			fmt.Println("Completed Hello..........")
 			return "Hello"
 		},
 		func() interface{} {
-			time.Sleep(100 * time.Microsecond)
+			fmt.Println("Running World..........")
+			time.Sleep(2 * time.Second)
+			fmt.Println("Completed World..........")
 			return "World"
 		},
 	}
 
+	fmt.Println("From: ", time.Now())
 	result := promise.All(tasks)
+	fmt.Println("End: ", time.Now())
 
 	fmt.Println("Result: ", result)
 

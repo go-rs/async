@@ -8,7 +8,6 @@ package async
 type Task func() interface{}
 type Channel chan interface{}
 type Result []interface{}
-type Out interface{}
 
 type Promise struct {
 	//TODO:
@@ -19,27 +18,19 @@ type Promise struct {
 }
 
 func (p *Promise) All(tasks []Task) Result {
-	workers := make([]Channel, 0, len(tasks))
+	// buffer channels for go routines
+	workers := make(Channel, len(tasks))
+	defer close(workers)
 	for _, task := range tasks {
-		result := execute(task)
-		workers = append(workers, result)
+		go func(task Task) {
+			workers <- task()
+		}(task)
 	}
 
 	// gather data from all channels
 	out := make(Result, 0, len(tasks))
-	for _, a := range workers {
-		out = append(out, <-a)
-	}
-	return out
-}
-
-func execute(task Task) Channel {
-	out := make(Channel)
-	{
-		go func() {
-			defer close(out)
-			out <- task()
-		}()
+	for i := 0; i < len(tasks); i++ {
+		out = append(out, <-workers)
 	}
 	return out
 }

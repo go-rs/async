@@ -18,19 +18,24 @@ type Promise struct {
 }
 
 func (p *Promise) All(tasks []Task) Result {
-	// buffer channels for go routines
-	workers := make(Channel, len(tasks))
-	defer close(workers)
+	// can not use buffer channels, because not able to maintain sequence
+	// using channel slice
+	workers := make([]Channel, 0, len(tasks))
 	for _, task := range tasks {
-		go func(task Task) {
-			workers <- task()
-		}(task)
+		workers = append(workers, func() Channel {
+			out := make(Channel)
+			go func(task Task) {
+				defer close(out)
+				out <- task()
+			}(task)
+			return out
+		}())
 	}
 
 	// gather data from all channels
 	out := make(Result, 0, len(tasks))
-	for i := 0; i < len(tasks); i++ {
-		out = append(out, <-workers)
+	for _, result := range workers {
+		out = append(out, <-result)
 	}
 	return out
 }

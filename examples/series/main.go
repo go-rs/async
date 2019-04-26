@@ -14,23 +14,24 @@ func main() {
 	tasks := []async.Task{
 		func() interface{} {
 			fmt.Println("Running Hello..........")
-			time.Sleep(4 * time.Second)
+			time.Sleep(2 * time.Second)
 			fmt.Println("Completed Hello..........")
+			//return errors.New("innocent")
 			return "Hello"
 		},
 		func() interface{} {
 			fmt.Println("Running World..........")
-			time.Sleep(2 * time.Second)
+			time.Sleep(1 * time.Second)
 			fmt.Println("Completed World..........")
 			return "World"
 		},
 	}
 
 	fmt.Println("From: ", time.Now())
-	result := promise.All(tasks)
+	result, err := promise.Series(tasks)
 	fmt.Println("End: ", time.Now())
 
-	fmt.Println("Result: ", result)
+	fmt.Println("Result: ", result, err)
 
 	fmt.Println("exit")
 }

@@ -8,26 +8,27 @@ package async
 type Tasks []func() interface{}
 type ETasks map[string]func() (interface{}, error)
 
+type channel chan interface{}
+
 // Reference: https://blog.golang.org/pipelines
 // Reference: https://en.wikipedia.org/wiki/Moore%27s_law
 // Reference: https://en.wikipedia.org/wiki/Amdahl%27s_law
+// Rob Pike: Concurrency enables Parallelism
 
 type Promise struct {
 	//TODO: Context - Cancel, Timeout
-	//Rob Pike: Concurrency enables Parallelism
-	//What to do on error? Is it best way to abort all operation?
 }
 
 //
 // parallel execution of all tasks
 //
-func (p *Promise) Parallel(tasks []func() interface{}) []interface{} {
+func (p *Promise) Parallel(tasks Tasks) []interface{} {
 	// can not use buffer channels, because not able to maintain output sequence
 	// using slice channels
-	workers := make([]chan interface{}, 0, len(tasks))
+	workers := make([]channel, 0, len(tasks))
 	for _, task := range tasks {
-		workers = append(workers, func() chan interface{} {
-			out := make(chan interface{})
+		workers = append(workers, func() channel {
+			out := make(channel)
 			go func(task func() interface{}) {
 				defer close(out)
 				out <- task()
@@ -48,13 +49,13 @@ func (p *Promise) Parallel(tasks []func() interface{}) []interface{} {
 //
 // Parallel execution of all tasks, but returns result as well as error
 //
-func (p *Promise) ParallelWithMap(tasks map[string]func() (interface{}, error)) (map[string]interface{}, map[string]error) {
+func (p *Promise) ParallelWithMap(tasks ETasks) (map[string]interface{}, map[string]error) {
 	// can not use buffer channels, because not able to maintain output sequence
-	// using slice channels
-	workers := make(map[string]chan interface{})
+	// using map channels
+	workers := make(map[string]channel)
 	for key, task := range tasks {
-		workers[key] = func() chan interface{} {
-			out := make(chan interface{})
+		workers[key] = func() channel {
+			out := make(channel)
 			go func(task func() (interface{}, error)) {
 				defer close(out)
 				val, err := task()
@@ -81,6 +82,23 @@ func (p *Promise) ParallelWithMap(tasks map[string]func() (interface{}, error)) 
 		out[key] = _val
 	}
 
+	// set error as nil if nothing caught
+	err = hasError(err)
+
+	return out, err
+}
+
+// check val type, if error then return cast to error
+func isError(val interface{}) (err error) {
+	switch val.(type) {
+	case error:
+		err = val.(error)
+	}
+	return
+}
+
+// check map and look for an error, otherwise set as nil
+func hasError(err map[string]error) map[string]error {
 	flag := true
 	for _, e := range err {
 		if e != nil {
@@ -92,13 +110,5 @@ func (p *Promise) ParallelWithMap(tasks map[string]func() (interface{}, error)) 
 		err = nil
 	}
 
-	return out, err
-}
-
-func isError(val interface{}) (err error) {
-	switch val.(type) {
-	case error:
-		err = val.(error)
-	}
-	return
+	return err
 }

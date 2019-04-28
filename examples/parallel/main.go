@@ -53,6 +53,10 @@ func main() {
 	mresult, err := promise.ParallelWithMap(mtasks)
 	fmt.Println("End: ", time.Now())
 
+	if err == nil {
+		fmt.Println("No error")
+	}
+
 	fmt.Println("Result: ", mresult, err)
 
 	fmt.Println("exit")
